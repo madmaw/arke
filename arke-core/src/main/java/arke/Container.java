@@ -19,17 +19,13 @@ public interface Container {
 
     // user operations
 
-    Map<String, String> getResponseDeviceProperties(long userId) throws ContainerException;
+    Device getPreferredDevice(long userId) throws ContainerException;
 
-    Map<String, String> getUserProperties(long userId) throws ContainerException;
+    User getUser(long userId) throws ContainerException;
 
     void attachUser(InboundMessage sourceMessage, long existingUserId) throws ContainerException;
 
     long createUser(InboundMessage sourceMessage) throws ContainerException;
 
-    void setUserProperty(long userId, String key, String value) throws ContainerException;
 
-    void removeUserProperty(long userId, String key) throws ContainerException;
-
-    void blockUser(long userId, String reasonBlocked) throws ContainerException;
 }

@@ -16,7 +16,10 @@ public class PersistentOutboundMessage {
     public static final String FIELD_TARGET_DEVICE_ID = "persistent_outbound_message_target_device_id";
     public static final String FIELD_TIME_LODGED = "persistent_outbound_message_time_lodged";
     public static final String FIELD_TIME_SENT = "persistent_outbound_message_time_sent";
+    public static final String FIELD_TIME_TRANSMITTED = "persistent_outbound_message_time_transmitted";
+    public static final String FIELD_TIME_RECEIVED = "persistent_outbound_message_time_received";
     public static final String FIELD_FAILURE_REASON = "persistent_outbound_message_failure_reason";
+    public static final String FIELD_FAILED_PERMANENTLY = "persistent_outbound_message_failed_permanently";
 
     @Column(name = FIELD_ID)
     @Id
@@ -30,8 +33,14 @@ public class PersistentOutboundMessage {
     private Date timeLodged;
     @Column(name = FIELD_TIME_SENT)
     private Date timeSent;
+    @Column(name = FIELD_TIME_TRANSMITTED)
+    private Date timeTransmitted;
+    @Column(name = FIELD_TIME_RECEIVED)
+    private Date timeReceived;
     @Column(name = FIELD_FAILURE_REASON)
     private String failureReason;
+    @Column(name = FIELD_FAILED_PERMANENTLY)
+    private boolean failedPermanently;
 
     public Integer getId() {
         return id;
@@ -79,5 +88,29 @@ public class PersistentOutboundMessage {
 
     public void setFailureReason(String failureReason) {
         this.failureReason = failureReason;
+    }
+
+    public Date getTimeTransmitted() {
+        return timeTransmitted;
+    }
+
+    public void setTimeTransmitted(Date timeTransmitted) {
+        this.timeTransmitted = timeTransmitted;
+    }
+
+    public Date getTimeReceived() {
+        return timeReceived;
+    }
+
+    public void setTimeReceived(Date timeReceived) {
+        this.timeReceived = timeReceived;
+    }
+
+    public boolean isFailedPermanently() {
+        return failedPermanently;
+    }
+
+    public void setFailedPermanently(boolean failedPermanently) {
+        this.failedPermanently = failedPermanently;
     }
 }

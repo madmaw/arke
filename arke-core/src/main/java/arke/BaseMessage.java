@@ -22,7 +22,7 @@ public class BaseMessage implements Message {
         }
 
         @Override
-        public String getMimeType() {
+        public String getContentType() {
             return this.mimeType;
         }
 

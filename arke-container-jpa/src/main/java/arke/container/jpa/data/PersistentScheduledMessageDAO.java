@@ -1,5 +1,7 @@
 package arke.container.jpa.data;
 
+import arke.ContainerDataException;
+
 import java.util.Date;
 import java.util.List;
 

@@ -1,6 +1,6 @@
 package arke.container.jpa.data.ormlite;
 
-import arke.container.jpa.data.ContainerDataException;
+import arke.ContainerDataException;
 import arke.container.jpa.data.PersistentScheduledMessage;
 import arke.container.jpa.data.PersistentScheduledMessageDAO;
 import com.j256.ormlite.dao.Dao;

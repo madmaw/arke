@@ -8,7 +8,7 @@ public interface Message {
 
         String getType();
 
-        String getMimeType();
+        String getContentType();
 
         byte[] getPayload();
     }

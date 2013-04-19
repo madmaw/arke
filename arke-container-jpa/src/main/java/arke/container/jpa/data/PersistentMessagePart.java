@@ -13,7 +13,7 @@ public class PersistentMessagePart implements Message.Part {
 
     public static final String FIELD_ID = "persistent_message_part_id";
     public static final String FIELD_TYPE = "persistent_message_part_type";
-    public static final String FIELD_MIME_TYPE = "persistent_message_part_mime_type";
+    public static final String FIELD_CONTENT_TYPE = "persistent_message_part_content_type";
     public static final String FIELD_PAYLOAD = "persistent_message_part_payload";
     public static final String FIELD_INBOUND_MESSAGE_ID = "persistent_message_part_inbound_message_id";
     public static final String FIELD_OUTBOUND_MESSAGE_ID = "persistent_message_part_outbound_message_id";
@@ -26,8 +26,8 @@ public class PersistentMessagePart implements Message.Part {
     private Integer id;
     @Column(name = FIELD_TYPE, nullable = true)
     private String type;
-    @Column(name = FIELD_MIME_TYPE, nullable = false)
-    private String mimeType;
+    @Column(name = FIELD_CONTENT_TYPE, nullable = false)
+    private String contentType;
     @Column(name = FIELD_PAYLOAD)
     private byte[] payload;
     @Column(name = FIELD_INBOUND_MESSAGE_ID)
@@ -55,12 +55,12 @@ public class PersistentMessagePart implements Message.Part {
         this.type = type;
     }
 
-    public String getMimeType() {
-        return mimeType;
+    public String getContentType() {
+        return contentType;
     }
 
-    public void setMimeType(String mimeType) {
-        this.mimeType = mimeType;
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
     }
 
     @Override

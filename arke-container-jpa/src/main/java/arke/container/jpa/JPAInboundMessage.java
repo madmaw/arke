@@ -3,7 +3,7 @@ package arke.container.jpa;
 import arke.BaseMessage;
 import arke.InboundMessage;
 import arke.Message;
-import arke.container.jpa.data.Device;
+import arke.container.jpa.data.PersistentDevice;
 import arke.container.jpa.data.PersistentInboundMessage;
 
 import java.util.Date;
@@ -12,17 +12,17 @@ import java.util.List;
 public class JPAInboundMessage extends BaseMessage implements InboundMessage {
 
     private PersistentInboundMessage persistentInboundMessage;
-    private Device sourceDevice;
+    private PersistentDevice sourcePersistentDevice;
 
-    public JPAInboundMessage(PersistentInboundMessage persistentInboundMessage, Device sourceDevice, List<Message.Part> parts) {
+    public JPAInboundMessage(PersistentInboundMessage persistentInboundMessage, PersistentDevice sourcePersistentDevice, List<Message.Part> parts) {
         super(parts);
         this.persistentInboundMessage = persistentInboundMessage;
-        this.sourceDevice = sourceDevice;
+        this.sourcePersistentDevice = sourcePersistentDevice;
     }
 
     @Override
     public Long getSourceUserId() {
-        Integer ownerId = this.sourceDevice.getOwnerId();
+        Integer ownerId = this.sourcePersistentDevice.getOwnerId();
         Long result;
         if( ownerId == null ) {
             result = null;
@@ -41,7 +41,7 @@ public class JPAInboundMessage extends BaseMessage implements InboundMessage {
         return persistentInboundMessage;
     }
 
-    public Device getSourceDevice() {
-        return sourceDevice;
+    public PersistentDevice getSourcePersistentDevice() {
+        return sourcePersistentDevice;
     }
 }

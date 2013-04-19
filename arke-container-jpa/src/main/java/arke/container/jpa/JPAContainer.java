@@ -16,15 +16,18 @@ public class JPAContainer implements Container, JPAMessageHandler {
     private Executor executor;
     private Messenger messenger;
 
-    private UserDAO userDAO;
-    private DeviceDAO deviceDAO;
+    private TimeZone systemTimeZone;
+
+    private PersistentUserDAO persistentUserDAO;
+    private PersistentDeviceDAO persistentDeviceDAO;
     private PersistentInboundMessageDAO persistentInboundMessageDAO;
     private PersistentOutboundMessageDAO persistentOutboundMessageDAO;
     private PersistentScheduledMessageDAO persistentScheduledMessageDAO;
     private PersistentMessagePartDAO persistentMessagePartDAO;
-    private UserPropertyDAO userPropertyDAO;
-    private DevicePropertyDAO devicePropertyDAO;
+    private PersistentUserPropertyDAO persistentUserPropertyDAO;
+    private PersistentDevicePropertyDAO persistentDevicePropertyDAO;
     private Universe universe;
+    private DeviceBasedTimeZoneGuesser timeZoneGuesser;
 
     private MessageRunnable messageRunnable;
 
@@ -64,10 +67,10 @@ public class JPAContainer implements Container, JPAMessageHandler {
                         // pull up all the unhandled messages
                         List<PersistentInboundMessage> inboundMessages = persistentInboundMessageDAO.findUnhandled();
                         for( PersistentInboundMessage inboundMessage : inboundMessages ) {
-                            Device device = deviceDAO.find(inboundMessage.getDeviceId());
+                            PersistentDevice persistentDevice = persistentDeviceDAO.find(inboundMessage.getDeviceId());
                             List<PersistentMessagePart> parts = persistentMessagePartDAO.findByInboundMessageId(inboundMessage.getId());
                             // casting it up
-                            JPAInboundMessage jpaMessage = new JPAInboundMessage(inboundMessage, device,  (List)parts);
+                            JPAInboundMessage jpaMessage = new JPAInboundMessage(inboundMessage, persistentDevice,  (List)parts);
                             try {
                                 // mark as handled
                                 inboundMessage.setHandled(true);
@@ -128,31 +131,36 @@ public class JPAContainer implements Container, JPAMessageHandler {
             Executor executor,
             Universe universe,
             Messenger messenger,
-            UserDAO userDAO,
-            DeviceDAO deviceDAO,
+            TimeZone systemTimeZone,
+            PersistentUserDAO persistentUserDAO,
+            PersistentDeviceDAO persistentDeviceDAO,
             PersistentInboundMessageDAO persistentInboundMessageDAO,
             PersistentOutboundMessageDAO persistentOutboundMessageDAO,
             PersistentScheduledMessageDAO persistentScheduledMessageDAO,
             PersistentMessagePartDAO persistentMessagePartDAO,
-            UserPropertyDAO userPropertyDAO,
-            DevicePropertyDAO devicePropertyDAO
+            PersistentUserPropertyDAO persistentUserPropertyDAO,
+            PersistentDevicePropertyDAO persistentDevicePropertyDAO,
+            DeviceBasedTimeZoneGuesser timeZoneGuesser
     ) {
         this.executor = executor;
 
         this.universe = universe;
         this.messenger = messenger;
+        this.systemTimeZone = systemTimeZone;
 
-        this.userDAO = userDAO;
-        this.deviceDAO = deviceDAO;
+        this.persistentUserDAO = persistentUserDAO;
+        this.persistentDeviceDAO = persistentDeviceDAO;
         this.persistentInboundMessageDAO = persistentInboundMessageDAO;
         this.persistentOutboundMessageDAO = persistentOutboundMessageDAO;
         this.persistentScheduledMessageDAO = persistentScheduledMessageDAO;
         this.persistentMessagePartDAO = persistentMessagePartDAO;
-        this.userPropertyDAO = userPropertyDAO;
-        this.devicePropertyDAO = devicePropertyDAO;
+        this.persistentUserPropertyDAO = persistentUserPropertyDAO;
+        this.persistentDevicePropertyDAO = persistentDevicePropertyDAO;
+
+        this.timeZoneGuesser = timeZoneGuesser;
     }
 
-    public void handleInboundMessage(Device from, List<PersistentMessagePart> parts) throws Exception {
+    public void handleInboundMessage(PersistentDevice from, List<PersistentMessagePart> parts) throws Exception {
         synchronized (this.messageRunnable) {
 
             // TODO do in transaction (very important)
@@ -191,21 +199,21 @@ public class JPAContainer implements Container, JPAMessageHandler {
     @Override
     public void sendMessage(InboundMessage sourceMessage, Message outboundMessage) throws ContainerException {
         JPAInboundMessage jpaInboundMessage = (JPAInboundMessage)sourceMessage;
-        sendMessage(jpaInboundMessage.getSourceDevice(), outboundMessage, null, true);
+        sendMessage(jpaInboundMessage.getSourcePersistentDevice(), outboundMessage, null, true);
     }
 
     @Override
     public void sendMessage(OutboundMessage message, boolean immediately) throws ContainerException {
         int userId = (int) message.getToUserId();
-        Device device = getResponseDevice(userId);
-        sendMessage(device, message, userId, immediately);
+        PersistentDevice persistentDevice = getResponseDevice(userId);
+        sendMessage(persistentDevice, message, userId, immediately);
     }
 
-    public Device getResponseDevice(long userId) throws ContainerException {
-        return this.deviceDAO.findMostRecentForUserId((int)userId);
+    public PersistentDevice getResponseDevice(long userId) throws ContainerException {
+        return this.persistentDeviceDAO.findMostRecentForUserId((int)userId);
     }
 
-    public void sendMessage(final Device targetDevice, final Message message, final Integer targetUserId, boolean immediately) throws ContainerDataException {
+    public void sendMessage(final PersistentDevice targetPersistentDevice, final Message message, final Integer targetUserId, boolean immediately) throws ContainerDataException {
 
         final Date now = new Date();
 
@@ -214,7 +222,7 @@ public class JPAContainer implements Container, JPAMessageHandler {
         if( targetUserId != null ) {
             persistentOutboundMessage.setTargetUserId(targetUserId);
         } else {
-            persistentOutboundMessage.setTargetDeviceId(targetDevice.getId());
+            persistentOutboundMessage.setTargetDeviceId(targetPersistentDevice.getId());
         }
 
         persistentOutboundMessage.setTimeLodged(now);
@@ -237,10 +245,10 @@ public class JPAContainer implements Container, JPAMessageHandler {
                             toSend = persistentMessagePartDAO.findPendingOutboundByUserIdBefore(targetUserId, now);
                         } else {
                             // use the device
-                            toSend = persistentMessagePartDAO.findPendingOutboundByDeviceIdBefore(targetDevice.getId(), now);
+                            toSend = persistentMessagePartDAO.findPendingOutboundByDeviceIdBefore(targetPersistentDevice.getId(), now);
                         }
                         try {
-                            messenger.sendMessage(targetDevice, toSend);
+                            messenger.sendMessage(targetPersistentDevice, toSend);
                             HashSet<Integer> sent = new HashSet<Integer>(toSend.size());
                             for( int i=0; i<toSend.size(); i++ ) {
                                 PersistentMessagePart persistentMessagePart = toSend.get(i);
@@ -273,7 +281,7 @@ public class JPAContainer implements Container, JPAMessageHandler {
             persistentMessagePart.setInboundMessageId(persistentInboundMessageId);
             persistentMessagePart.setScheduledMessageId(persistentScheduledMessageId);
             persistentMessagePart.setSequenceNumber(i);
-            persistentMessagePart.setType(part.getMimeType());
+            persistentMessagePart.setType(part.getContentType());
             persistentMessagePart.setType(part.getType());
             this.persistentMessagePartDAO.create(persistentMessagePart);
         }
@@ -302,74 +310,46 @@ public class JPAContainer implements Container, JPAMessageHandler {
 
     @Override
     public void attachUser(InboundMessage sourceMessage, long existingUserId) throws ContainerException {
+        attachUser(sourceMessage, existingUserId, null);
+    }
+    public void attachUser(InboundMessage sourceMessage, long existingUserId, PersistentUser user) throws ContainerException {
         // attach the communication method to an existing user
         JPAInboundMessage jpaInboundMessage = (JPAInboundMessage)sourceMessage;
-        Device sourceDevice = jpaInboundMessage.getSourceDevice();
-        sourceDevice.setOwnerId((int)existingUserId);
-        this.deviceDAO.update(sourceDevice);
+        PersistentDevice sourcePersistentDevice = jpaInboundMessage.getSourcePersistentDevice();
+        sourcePersistentDevice.setOwnerId((int)existingUserId);
+        this.persistentDeviceDAO.update(sourcePersistentDevice);
+        // attempt to guess timezone if we haven't already set it
+        if( user == null ) {
+            user = this.persistentUserDAO.find((int)existingUserId);
+        }
+        if( user.getTimeZoneId() == null ) {
+            // attempt to guess
+            String timeZoneId = this.timeZoneGuesser.guessTimeZoneId(sourcePersistentDevice);
+            if( timeZoneId != null ) {
+                user.setTimeZoneId(timeZoneId);
+                this.persistentUserDAO.update(user);
+            }
+        }
     }
 
     @Override
     public long createUser(InboundMessage sourceMessage) throws ContainerException {
-        // create a new user
-        User user = new User();
-        long result = this.userDAO.create(user);
-        this.attachUser(sourceMessage, result);
+        // create a new persistentUser
+        PersistentUser persistentUser = new PersistentUser();
+        long result = this.persistentUserDAO.create(persistentUser);
+        this.attachUser(sourceMessage, result, persistentUser);
         return result;
     }
 
     @Override
-    public Map<String, String> getResponseDeviceProperties(long userId) throws ContainerException {
-        Device device = this.getResponseDevice(userId);
-
-        List<DeviceProperty> deviceProperties = this.devicePropertyDAO.findByDeviceId(device.getId());
-        HashMap<String, String> result = new HashMap<String, String>(deviceProperties.size());
-
-        for( DeviceProperty deviceProperty : deviceProperties ) {
-            result.put(deviceProperty.getKey(), deviceProperty.getValue());
-        }
-
-        return result;
+    public Device getPreferredDevice(long userId) throws ContainerException {
+        PersistentDevice persistentDevice = getResponseDevice(userId);
+        return new JPADevice(persistentDevice, this.persistentDevicePropertyDAO);
     }
 
     @Override
-    public Map<String, String> getUserProperties(long userId) throws ContainerException {
-
-        List<UserProperty> userProperties = this.userPropertyDAO.findByUserId((int)userId);
-        HashMap<String, String> result = new HashMap<String, String>(userProperties.size());
-
-        for( UserProperty userProperty : userProperties ) {
-            result.put(userProperty.getKey(), userProperty.getValue());
-        }
-
-        return result;
-    }
-
-    @Override
-    public void setUserProperty(long userId, String key, String value) throws ContainerException {
-        UserProperty property = this.userPropertyDAO.findByUserIdAndKey((int)userId, key);
-        if( property != null ) {
-            property.setValue(value);
-            this.userPropertyDAO.update(property);
-        } else {
-            property = new UserProperty();
-            property.setUserId((int)userId);
-            property.setKey(key);
-            property.setValue(value);
-            this.userPropertyDAO.create(property);
-        }
-    }
-
-    @Override
-    public void removeUserProperty(long userId, String key) throws ContainerException {
-        this.userPropertyDAO.delete((int)userId, key);
-    }
-
-    @Override
-    public void blockUser(long userId, String reasonBlocked) throws ContainerException {
-        User user = this.userDAO.find((int)userId);
-        user.setBlocked(true);
-        user.setBlockReason(reasonBlocked);
-        this.userDAO.update(user);
+    public User getUser(long userId) throws ContainerException {
+        PersistentUser persistentUser = this.persistentUserDAO.find((int)userId);
+        return new JPAUser(persistentUser, this.systemTimeZone, this.persistentUserDAO, this.persistentUserPropertyDAO);
     }
 }
