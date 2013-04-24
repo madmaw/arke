@@ -11,23 +11,27 @@ public class Action {
         ROCK(true),
         PAPER(true),
         SCISSORS(true),
-        QUIT(true),
+        STOP(false),
         TIMEOUT(false);
 
-        private boolean userDriven;
+        private boolean move;
 
-        Type(boolean userDriven) {
-            this.userDriven = userDriven;
+        Type(boolean move) {
+            this.move = move;
+        }
+
+        public boolean isMove() {
+            return this.move;
         }
 
         public int compare(Type type) {
             int result;
-            if( this == type || this == QUIT && type == TIMEOUT || this == TIMEOUT && type == QUIT ) {
+            if( this == STOP || this == TIMEOUT ) {
+                result = -1;
+            } else if( this == type ) {
                 result = 0;
             } else {
-                if( this == QUIT || this == TIMEOUT ) {
-                    result = -1;
-                } else if( type == QUIT || type == TIMEOUT ) {
+                if( type == STOP || type == TIMEOUT ) {
                     result = 1;
                 } else if( this == SCISSORS ) {
                     if( type == PAPER ) {
@@ -50,10 +54,6 @@ public class Action {
                 }
             }
             return result;
-        }
-
-        public boolean isUserDriven() {
-            return userDriven;
         }
     }
 

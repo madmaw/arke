@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Arke Launcher</string>
+
+    <string name="service_start_button">Start</string>
+    <string name="service_stop_button">Stop</string>
+    <string name="service_default">arke.sample.rps.android.RockPaperScissorsService</string>
+    <string name="message_send_button">Send</string>
+
+    <string name="address_type_default">LOCAL</string>
+    <string name="address_type_hint"></string>
+    <string name="address_hint">A unique name</string>
+    <string name="address_default">admin</string>
+
+    <string name="message_inbound">TO</string>
+    <string name="message_outbound">FROM</string>
+
+</resources>

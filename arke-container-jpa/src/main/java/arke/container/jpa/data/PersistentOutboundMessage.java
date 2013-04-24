@@ -20,6 +20,7 @@ public class PersistentOutboundMessage {
     public static final String FIELD_TIME_RECEIVED = "persistent_outbound_message_time_received";
     public static final String FIELD_FAILURE_REASON = "persistent_outbound_message_failure_reason";
     public static final String FIELD_FAILED_PERMANENTLY = "persistent_outbound_message_failed_permanently";
+    public static final String FIELD_RECEIPT = "persistent_outbound_message_receipt";
 
     @Column(name = FIELD_ID)
     @Id
@@ -41,6 +42,8 @@ public class PersistentOutboundMessage {
     private String failureReason;
     @Column(name = FIELD_FAILED_PERMANENTLY)
     private boolean failedPermanently;
+    @Column(name = FIELD_RECEIPT)
+    private String receipt;
 
     public Integer getId() {
         return id;
@@ -112,5 +115,13 @@ public class PersistentOutboundMessage {
 
     public void setFailedPermanently(boolean failedPermanently) {
         this.failedPermanently = failedPermanently;
+    }
+
+    public String getReceipt() {
+        return receipt;
+    }
+
+    public void setReceipt(String receipt) {
+        this.receipt = receipt;
     }
 }

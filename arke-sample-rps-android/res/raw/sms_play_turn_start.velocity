@@ -1,0 +1,2 @@
+Turn ${turn}. Players are #set($first = true)#foreach($player in $players)#if($first)#set($first = false)#else, #end#if($player.id == $recipient.id)you#else${player.name}#end#end.#if($move) You play ${move}#else You may enter ROCK, PAPER, or SCISSORS to play, or STOP to quit. You have until $date.format('hh:mm a', $timeout)#end.
+

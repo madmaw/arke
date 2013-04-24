@@ -35,7 +35,7 @@ public class AndroidSMSDeliveryHandler {
     private BroadcastReceiver deliveredBroadcastReceiver;
     private BroadcastReceiver smsBroadcastReceiver;
 
-    private JPAContainer container;
+    private boolean started = false;
 
     public AndroidSMSDeliveryHandler(
             Context context,
@@ -44,7 +44,6 @@ public class AndroidSMSDeliveryHandler {
             final PersistentDeviceDAO persistentDeviceDAO
     ) {
         this.context = context;
-        this.container = container;
         this.sentMessagePartDAO = sentMessagePartDAO;
 
         this.smsBroadcastReceiver = new BroadcastReceiver() {
@@ -72,6 +71,7 @@ public class AndroidSMSDeliveryHandler {
                             part.setSequenceNumber(0);
                             part.setContentType(ContentTypeUtils.toTextPlainMimeType(ENCODING));
                             part.setPayload(messageBody.getBytes(ENCODING));
+                            parts.add(part);
                             container.handleInboundMessage(persistentDevice, parts);
                         } catch( Exception ex ) {
                             LOG.log(Level.WARNING, "unable to handle sms from "+phoneNumber+" : "+messageBody, ex);
@@ -132,24 +132,30 @@ public class AndroidSMSDeliveryHandler {
     }
 
     public void start() {
-        this.context.registerReceiver(
-                this.sentBroadcastReceiver,
-                new IntentFilter(AndroidSMSConstants.SENT_SMS_INTENT_NAME)
-        );
-        this.context.registerReceiver(
-                this.deliveredBroadcastReceiver,
-                new IntentFilter(AndroidSMSConstants.DELIVERED_SMS_INTENT_NAME)
-        );
-        this.context.registerReceiver(
-                this.smsBroadcastReceiver,
-                new IntentFilter(AndroidSMSConstants.RECEIVED_SMS_INTENT_NAME)
-        );
+        if( !started ) {
+            this.context.registerReceiver(
+                    this.sentBroadcastReceiver,
+                    new IntentFilter(AndroidSMSConstants.SENT_SMS_INTENT_NAME)
+            );
+            this.context.registerReceiver(
+                    this.deliveredBroadcastReceiver,
+                    new IntentFilter(AndroidSMSConstants.DELIVERED_SMS_INTENT_NAME)
+            );
+            this.context.registerReceiver(
+                    this.smsBroadcastReceiver,
+                    new IntentFilter(AndroidSMSConstants.RECEIVED_SMS_INTENT_NAME)
+            );
+            started = true;
+        }
     }
 
     public void stop() {
-        this.context.unregisterReceiver(this.sentBroadcastReceiver);
-        this.context.unregisterReceiver(this.deliveredBroadcastReceiver);
-        this.context.unregisterReceiver(this.smsBroadcastReceiver);
+        if( started ) {
+            this.context.unregisterReceiver(this.sentBroadcastReceiver);
+            this.context.unregisterReceiver(this.deliveredBroadcastReceiver);
+            this.context.unregisterReceiver(this.smsBroadcastReceiver);
+            started = false;
+        }
     }
 
     public void checkMessageSent(int messageId) throws ContainerDataException {

@@ -1,6 +1,8 @@
 package arke.container.jpa.data;
 
 import arke.Message;
+import com.j256.ormlite.field.DataType;
+import com.j256.ormlite.field.DatabaseField;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -28,7 +30,8 @@ public class PersistentMessagePart implements Message.Part {
     private String type;
     @Column(name = FIELD_CONTENT_TYPE, nullable = false)
     private String contentType;
-    @Column(name = FIELD_PAYLOAD)
+    // don't seem to able to specify this in JPA?!
+    @DatabaseField(columnName = FIELD_PAYLOAD, dataType = DataType.BYTE_ARRAY)
     private byte[] payload;
     @Column(name = FIELD_INBOUND_MESSAGE_ID)
     private Integer inboundMessageId;

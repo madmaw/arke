@@ -14,7 +14,9 @@ public interface PlayerDAO {
 
     Player findByUserId(long userId) throws ContainerDataException;
 
+    Player find(int id) throws ContainerDataException;
+
     List<Player> findByCurrentGameId(int gameId) throws ContainerDataException;
 
-    List<Player> findAvailable() throws ContainerDataException;
+    List<Player> findAvailable(int max) throws ContainerDataException;
 }

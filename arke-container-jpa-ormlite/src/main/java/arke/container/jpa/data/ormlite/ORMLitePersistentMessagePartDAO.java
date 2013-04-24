@@ -58,10 +58,12 @@ public class ORMLitePersistentMessagePartDAO implements PersistentMessagePartDAO
             if( deviceId != null ) {
                 messageWhere.and().eq(PersistentOutboundMessage.FIELD_TARGET_DEVICE_ID, deviceId);
             }
-            messageWhere.or(
-                    messageWhere.isNull(PersistentOutboundMessage.FIELD_TIME_SENT),
-                    messageWhere.isNotNull(PersistentOutboundMessage.FIELD_FAILURE_REASON)
-            );
+            // TODO I'm doing something wrong here
+            messageWhere.and().isNull(PersistentOutboundMessage.FIELD_TIME_SENT);
+//            messageWhere.or(
+//                    messageWhere.isNull(PersistentOutboundMessage.FIELD_TIME_SENT),
+//                    messageWhere.isNotNull(PersistentOutboundMessage.FIELD_FAILURE_REASON)
+//            );
             messageQuery.orderBy(PersistentOutboundMessage.FIELD_TIME_LODGED, true);
 
             List<PersistentOutboundMessage> messages = messageQuery.query();

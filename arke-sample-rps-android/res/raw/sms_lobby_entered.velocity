@@ -1,0 +1,1 @@
+Welcome to the lobby. You have won $player.gamesWon of $player.gamesPlayed game#if($player.gamesPlayed != 1)s#end. You may START a game, or enter STOP to quit.

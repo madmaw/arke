@@ -248,12 +248,14 @@ public class JPAContainer implements Container, JPAMessageHandler {
                             toSend = persistentMessagePartDAO.findPendingOutboundByDeviceIdBefore(targetPersistentDevice.getId(), now);
                         }
                         try {
-                            messenger.sendMessage(targetPersistentDevice, toSend);
+                            String receipt = messenger.sendMessage(targetPersistentDevice, toSend);
+                            persistentOutboundMessage.setTimeSent(now);
+                            persistentOutboundMessage.setReceipt(receipt);
                             HashSet<Integer> sent = new HashSet<Integer>(toSend.size());
                             for( int i=0; i<toSend.size(); i++ ) {
                                 PersistentMessagePart persistentMessagePart = toSend.get(i);
                                 Integer outboundMessageId = persistentMessagePart.getOutboundMessageId();
-                                if( sent.contains(outboundMessageId) ) {
+                                if( !sent.contains(outboundMessageId) ) {
                                     sent.add(outboundMessageId);
                                     persistentOutboundMessageDAO.updateTimeSent(outboundMessageId, now);
                                 }
@@ -281,8 +283,9 @@ public class JPAContainer implements Container, JPAMessageHandler {
             persistentMessagePart.setInboundMessageId(persistentInboundMessageId);
             persistentMessagePart.setScheduledMessageId(persistentScheduledMessageId);
             persistentMessagePart.setSequenceNumber(i);
-            persistentMessagePart.setType(part.getContentType());
+            persistentMessagePart.setContentType(part.getContentType());
             persistentMessagePart.setType(part.getType());
+            persistentMessagePart.setPayload(part.getPayload());
             this.persistentMessagePartDAO.create(persistentMessagePart);
         }
 

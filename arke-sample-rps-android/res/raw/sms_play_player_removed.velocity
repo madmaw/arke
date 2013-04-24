@@ -1,0 +1,1 @@
+#if($recipient.id == $removed.id)You were#else${removed.name} was#end eliminated.

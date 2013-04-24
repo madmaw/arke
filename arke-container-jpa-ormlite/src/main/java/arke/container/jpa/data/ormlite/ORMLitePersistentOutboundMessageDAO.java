@@ -16,6 +16,10 @@ public class ORMLitePersistentOutboundMessageDAO implements PersistentOutboundMe
         this.dao = dao;
     }
 
+    public Dao<PersistentOutboundMessage, Integer> getDao() {
+        return this.dao;
+    }
+
     @Override
     public int create(PersistentOutboundMessage message) throws ContainerDataException {
         try {

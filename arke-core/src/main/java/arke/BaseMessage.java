@@ -42,4 +42,6 @@ public class BaseMessage implements Message {
     public List<Part> getParts() {
         return this.parts;
     }
+
+
 }

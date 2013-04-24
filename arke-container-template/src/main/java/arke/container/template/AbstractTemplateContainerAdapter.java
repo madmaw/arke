@@ -14,6 +14,11 @@ public abstract class AbstractTemplateContainerAdapter implements TemplateContai
     }
 
     @Override
+    public long scheduleMessage(ScheduledMessage message) throws ContainerException {
+        return this.container.scheduleMessage(message);
+    }
+
+    @Override
     public void cancelScheduledMessage(long id) throws ContainerException {
         this.container.cancelScheduledMessage(id);
     }

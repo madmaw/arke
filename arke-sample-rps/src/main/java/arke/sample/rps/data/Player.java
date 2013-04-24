@@ -4,6 +4,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import java.util.Date;
 
 @Entity(name = Player.TABLE_NAME)
 public class Player {
@@ -25,7 +26,7 @@ public class Player {
     @Column(name = FIELD_USER_ID)
     private Long userId;
 
-    @Column(name = FIELD_NAME, nullable = false)
+    @Column(name = FIELD_NAME, nullable = false, unique = true)
     private String name;
 
     @Column(name = FIELD_CURRENT_GAME_ID)

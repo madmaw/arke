@@ -1,0 +1,1 @@
+#if($reason == 'TIMEOUT')Your turn timed out, you have been retired.#else You quit.#end  You may rejoin the game by sending START.

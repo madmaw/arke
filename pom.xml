@@ -8,12 +8,14 @@
 
     <modules>
         <module>arke-core</module>
+        <module>arke-velocity-android</module>
         <module>arke-container-template</module>
         <module>arke-container-jpa</module>
         <module>arke-container-jpa-ormlite</module>
         <module>arke-messenger-sms-android</module>
-        <module>arke-sample-rps-android</module>
+        <module>arke-launcher-android</module>
         <module>arke-sample-rps</module>
+        <module>arke-sample-rps-android</module>
     </modules>
 
     <properties>

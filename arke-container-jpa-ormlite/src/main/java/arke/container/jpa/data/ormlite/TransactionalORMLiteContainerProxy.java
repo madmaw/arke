@@ -91,16 +91,6 @@ public class TransactionalORMLiteContainerProxy implements Container {
     }
 
     @Override
-    public Map<String, String> getResponseDeviceProperties(long userId) throws ContainerException {
-        return this.proxied.getResponseDeviceProperties(userId);
-    }
-
-    @Override
-    public Map<String, String> getUserProperties(long userId) throws ContainerException {
-        return this.proxied.getUserProperties(userId);
-    }
-
-    @Override
     public void attachUser(final InboundMessage sourceMessage, final long existingUserId) throws ContainerException {
         try {
             TransactionManager.callInTransaction(
@@ -136,57 +126,14 @@ public class TransactionalORMLiteContainerProxy implements Container {
     }
 
     @Override
-    public void setUserProperty(final long userId, final String key, final String value) throws ContainerException {
-        try {
-            TransactionManager.callInTransaction(
-                    this.connectionSource,
-                    new Callable<Void>() {
-                        @Override
-                        public Void call() throws Exception {
-                            proxied.setUserProperty(userId, key, value);
-                            return null;
-                        }
-                    }
-            );
-        } catch( SQLException ex ) {
-            throw new ContainerException(ex);
-        }
-
+    public Device getPreferredDevice(long userId) throws ContainerException {
+        // should this be a proxied device?
+        return proxied.getPreferredDevice(userId);
     }
 
     @Override
-    public void removeUserProperty(final long userId, final String key) throws ContainerException {
-        try {
-            TransactionManager.callInTransaction(
-                    this.connectionSource,
-                    new Callable<Void>() {
-                        @Override
-                        public Void call() throws Exception {
-                            proxied.removeUserProperty(userId, key);
-                            return null;
-                        }
-                    }
-            );
-        } catch( SQLException ex ) {
-            throw new ContainerException(ex);
-        }
-    }
-
-    @Override
-    public void blockUser(final long userId, final String reasonBlocked) throws ContainerException {
-        try {
-            TransactionManager.callInTransaction(
-                    this.connectionSource,
-                    new Callable<Void>() {
-                        @Override
-                        public Void call() throws Exception {
-                            proxied.blockUser(userId, reasonBlocked);
-                            return null;
-                        }
-                    }
-            );
-        } catch( SQLException ex ) {
-            throw new ContainerException(ex);
-        }
+    public User getUser(long userId) throws ContainerException {
+        // should this be a proxied device?
+        return proxied.getUser(userId);
     }
 }

@@ -1,0 +1,1 @@
+#if($winner.id == $recipient.id)You#else${winner.name}#end won.
