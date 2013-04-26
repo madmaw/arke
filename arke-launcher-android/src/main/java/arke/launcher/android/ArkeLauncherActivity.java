@@ -6,12 +6,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.BaseAdapter;
-import android.widget.ListView;
-import android.widget.TextView;
+import android.widget.*;
 import arke.container.jpa.messenger.sms.android.AndroidIntentDeliveryHandler;
 import arke.container.jpa.messenger.sms.android.AndroidIntentMessenger;
+import arke.container.jpa.messenger.sms.android.AndroidSMSConstants;
 
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -21,6 +19,8 @@ public class ArkeLauncherActivity extends Activity {
     private static final Logger LOG = Logger.getLogger(ArkeLauncherActivity.class.getName());
 
     public static final String PREFERENCE_KEY_ADDRESS = "address";
+    public static final String PREFERENCE_KEY_ACTIVE = "active";
+    public static final String PREFERENCE_NAME = "arke";
 
     private static class Message {
         private boolean inbound;
@@ -105,7 +105,10 @@ public class ArkeLauncherActivity extends Activity {
     }
 
     private BroadcastReceiver messageReceiver;
+    private BroadcastReceiver smsReceiver;
     private MessageAdapter messageAdapter;
+    private boolean started;
+    private boolean auto;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,6 +120,7 @@ public class ArkeLauncherActivity extends Activity {
                 eatIntent(intent);
             }
         };
+        this.smsReceiver = new ArkeLauncherBroadcastReceiver(true);
         this.messageAdapter = new MessageAdapter();
 
         // set up the UI
@@ -149,13 +153,23 @@ public class ArkeLauncherActivity extends Activity {
         super.onStart();
 
         final TextView serviceNameView = (TextView)findViewById(R.id.service_name);
-        SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences preferences = getSharedPreferences(PREFERENCE_NAME, MODE_WORLD_WRITEABLE);
         String address = preferences.getString(PREFERENCE_KEY_ADDRESS, getString(R.string.service_default));
+        boolean auto = preferences.getBoolean(PREFERENCE_KEY_ACTIVE, false);
         serviceNameView.setText(address);
 
         final View messagePanel = findViewById(R.id.message_panel);
         final View startButton = findViewById(R.id.service_start_button);
         final View stopButton = findViewById(R.id.service_stop_button);
+        final CheckBox autoCheckBox = (CheckBox)findViewById(R.id.service_auto_sms);
+        this.auto = auto;
+        autoCheckBox.setChecked(auto);
+        autoCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                setAuto(isChecked);
+            }
+        });
 
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -237,12 +251,33 @@ public class ArkeLauncherActivity extends Activity {
         super.onDestroy();
     }
 
-    private boolean startService(String address) {
+    private void setAuto(boolean auto) {
+        this.auto = auto;
+        SharedPreferences preferences = getSharedPreferences(PREFERENCE_NAME, MODE_WORLD_WRITEABLE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean(PREFERENCE_KEY_ACTIVE, auto);
+        editor.commit();
+        if( this.started ) {
+            if( auto ) {
+                // turn off our own SMS listener
+                unregisterReceiver(this.smsReceiver);
+            } else {
+                // turn it on
+                registerReceiver(this.smsReceiver, new IntentFilter(AndroidSMSConstants.RECEIVED_SMS_INTENT_NAME));
+            }
+        }
+    }
 
+    private boolean startService(String address) {
+        this.started = true;
+        if( !this.auto ) {
+            registerReceiver(this.smsReceiver, new IntentFilter(AndroidSMSConstants.RECEIVED_SMS_INTENT_NAME));
+        }
         Log.d(getClass().getName(), "staring "+address);
 
         // remember the service name
-        SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
+        SharedPreferences preferences = getSharedPreferences(PREFERENCE_NAME, MODE_WORLD_WRITEABLE);
+        SharedPreferences.Editor editor = preferences.edit();
         editor.putString(PREFERENCE_KEY_ADDRESS, address);
         editor.commit();
 
@@ -259,6 +294,10 @@ public class ArkeLauncherActivity extends Activity {
     }
 
     private boolean stopService(String address) {
+        this.started = false;
+        if( !this.auto ) {
+            unregisterReceiver(this.smsReceiver);
+        }
         Log.d(getClass().getName(), "stopping "+address);
 
         Intent intent = AndroidIntentMessenger.toIntent(address);

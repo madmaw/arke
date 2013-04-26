@@ -4,6 +4,8 @@
     <string name="service_start_button">Start</string>
     <string name="service_stop_button">Stop</string>
     <string name="service_default">arke.sample.rps.android.RockPaperScissorsService</string>
+    <string name="service_auto_sms">Auto-start on incoming SMS</string>
+
     <string name="message_send_button">Send</string>
 
     <string name="address_type_default">LOCAL</string>
@@ -13,5 +15,6 @@
 
     <string name="message_inbound">TO</string>
     <string name="message_outbound">FROM</string>
+
 
 </resources>

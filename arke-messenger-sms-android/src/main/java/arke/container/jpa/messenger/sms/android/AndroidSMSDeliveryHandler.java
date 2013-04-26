@@ -133,6 +133,7 @@ public class AndroidSMSDeliveryHandler {
 
     public void start() {
         if( !started ) {
+
             this.context.registerReceiver(
                     this.sentBroadcastReceiver,
                     new IntentFilter(AndroidSMSConstants.SENT_SMS_INTENT_NAME)
@@ -141,10 +142,12 @@ public class AndroidSMSDeliveryHandler {
                     this.deliveredBroadcastReceiver,
                     new IntentFilter(AndroidSMSConstants.DELIVERED_SMS_INTENT_NAME)
             );
+            /* this is now done externally
             this.context.registerReceiver(
                     this.smsBroadcastReceiver,
                     new IntentFilter(AndroidSMSConstants.RECEIVED_SMS_INTENT_NAME)
             );
+            */
             started = true;
         }
     }
@@ -153,7 +156,7 @@ public class AndroidSMSDeliveryHandler {
         if( started ) {
             this.context.unregisterReceiver(this.sentBroadcastReceiver);
             this.context.unregisterReceiver(this.deliveredBroadcastReceiver);
-            this.context.unregisterReceiver(this.smsBroadcastReceiver);
+            //this.context.unregisterReceiver(this.smsBroadcastReceiver);
             started = false;
         }
     }

@@ -34,6 +34,8 @@ import arke.sample.rps.data.ormlite.ORMLiteActionDAO;
 import arke.sample.rps.data.ormlite.ORMLiteGameDAO;
 import arke.sample.rps.data.ormlite.ORMLitePlayerDAO;
 import arke.velocity.android.AndroidVelocityUtils;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.geocoding.PhoneNumberOfflineGeocoder;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.support.ConnectionSource;
@@ -46,16 +48,13 @@ import org.apache.velocity.tools.generic.MathTool;
 
 import java.io.File;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.concurrent.Executors;
 
 public class RockPaperScissorsService extends Service {
 
     //public static final String DATABASE_NAME = "/sdcard/rps";
-    public static final int DATABASE_VERSION = 4;
+    public static final int DATABASE_VERSION = 6;
     public static final String ENCODING = "utf-8";
     public static final String MIME_TYPE = ContentTypeUtils.MIME_TYPE_TEXT_PLAIN;
 
@@ -217,21 +216,18 @@ public class RockPaperScissorsService extends Service {
             ORMLitePersistentUserPropertyDAO userPropertyDao = new ORMLitePersistentUserPropertyDAO((Dao<PersistentUserProperty, Integer>)helper.getDao(PersistentUserProperty.class));
             ORMLitePersistentDevicePropertyDAO devicePropertyDao = new ORMLitePersistentDevicePropertyDAO((Dao<PersistentDeviceProperty, Integer>)helper.getDao(PersistentDeviceProperty.class));
 
-            DeviceBasedTimeZoneGuesser timeZoneGuesser = new DeviceBasedTimeZoneGuesser() {
-                @Override
-                public String guessTimeZoneId(PersistentDevice device) {
-                    // TODO implement this better
-                    return null;
-                }
-            };
+            DeviceBasedTimeZoneGuesser timeZoneGuesser = new MobileNumberBasedTimeZoneGuesser(
+                    PhoneNumberOfflineGeocoder.getInstance(),
+                    PhoneNumberUtil.getInstance(),
+                    Locale.getDefault().getCountry()
+            );
 
             RockPaperScissorsUniverse universe = new RockPaperScissorsUniverse(
                     playerDao,
                     gameDao,
                     actionDao,
-                    // one hour seems adequate
-                    //1000 * 60 * 60,
-                    1000 * 60,
+                    // 5 minutes
+                    1000 * 60 * 5,
                     timeZone
             );
 
@@ -262,6 +258,7 @@ public class RockPaperScissorsService extends Service {
 
             TelephonyManager tMgr =(TelephonyManager)this.getSystemService(Context.TELEPHONY_SERVICE);
             String sourceAddress = tMgr.getLine1Number();
+
             SmsManager smsManager = SmsManager.getDefault();
 
 

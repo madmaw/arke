@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.telephony.SmsManager;
 import arke.ContainerException;
 import arke.ContentTypeUtils;
+import arke.MessageWrapper;
 import arke.container.jpa.Messenger;
 import arke.container.jpa.data.PersistentDevice;
 import arke.container.jpa.data.PersistentMessagePart;
@@ -42,38 +43,17 @@ public class AndroidSMSMessenger implements Messenger {
 
     @Override
     public String sendMessage(PersistentDevice targetPersistentDevice, List<PersistentMessagePart> parts) throws ContainerException {
-        StringBuilder stringBuilder = new StringBuilder();
-        boolean first = true;
-        for( PersistentMessagePart part : parts ) {
-            String contentType = part.getContentType();
-            String mimeType = ContentTypeUtils.extractMimeType(contentType);
-            if( ContentTypeUtils.MIME_TYPE_TEXT_PLAIN.equals(mimeType) ) {
-                // get the encoding
-                String encoding = ContentTypeUtils.extractCharset(contentType);
-                String message;
-                if( encoding != null ) {
-                    Charset charset = Charset.forName(encoding);
-                    message = new String(part.getPayload(), charset);
-                } else {
-                    message = new String(part.getPayload());
-                }
-                if( !first ) {
-                    stringBuilder.append('\n');
-                    stringBuilder.append('\n');
-                } else {
-                    first = false;
-                }
-                stringBuilder.append(message.trim());
-            }
-        }
 
-        ArrayList<String> messages = smsManager.divideMessage(stringBuilder.toString());
+        String fullMessage = MessageWrapper.toString((List)parts);
+
+        ArrayList<String> messages = smsManager.divideMessage(fullMessage);
         String phoneNumber = targetPersistentDevice.getDeviceName();
 
         ArrayList<PendingIntent> sentIntents = new ArrayList<PendingIntent>(messages.size());
         ArrayList<PendingIntent> deliveryIntents = new ArrayList<PendingIntent>(messages.size());
 
         SentMessage sentMessage = new SentMessage();
+        sentMessage.setDescription(phoneNumber+" -> "+fullMessage);
 
         int sentMessageId = sentMessageDAO.create(sentMessage);
 

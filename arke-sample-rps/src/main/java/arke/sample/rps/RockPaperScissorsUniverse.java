@@ -41,6 +41,7 @@ public class RockPaperScissorsUniverse implements TemplateUniverse {
 
     public static final String ACTION_START = "START";
     public static final String ACTION_STOP = "STOP";
+    public static final String ACTION_PLAY = "CREATE";
     public static final String ACTION_TIMEZONE = "TZ";
 
     private PlayerDAO playerDAO;
@@ -96,55 +97,66 @@ public class RockPaperScissorsUniverse implements TemplateUniverse {
         // go until the first white space
 
         StringTokenizer st = new StringTokenizer(text);
-        final String name = st.nextToken();
-        if( name == null || name.length() < MIN_NAME_LENGTH ) {
-            container.sendMessage(
-                    inboundMessage,
-                    new String[]{TEMPLATE_ID_CREATE_PLAYER_FAILED_NAME_TOO_SHORT},
-                    new HashMap<String, Object>() {{
-                        put("name", name);
-                        put("minlength", MIN_NAME_LENGTH);
-                    }}
-            );
-        } else if( name.length() > MAX_NAME_LENGTH ) {
-            container.sendMessage(
-                    inboundMessage,
-                    new String[]{TEMPLATE_ID_CREATE_PLAYER_FAILED_NAME_TOO_LONG},
-                    new HashMap<String, Object>(){{ put("name", name); put("maxlength", MAX_NAME_LENGTH); }}
-            );
-        } else {
-            // does the name exist
-            Player player = this.playerDAO.findByName(name);
-            if( player != null ) {
-                container.sendMessage(inboundMessage, new String[]{TEMPLATE_ID_CREATE_PLAYER_FAILED_NAME_ALREADY_EXISTS}, new HashMap<String, Object>(){{ put("name", name); }});
-            } else {
-                if( sourceUserId == null ) {
-                    sourceUserId = container.createUser(inboundMessage);
-                }
-
-                // create a player
-                player = new Player();
-                player.setName(name);
-                player.setUserId(sourceUserId);
-
-                int playerId = this.playerDAO.create(player);
-
-                // is there a timezone?
+        if( st.hasMoreTokens() ) {
+            String command = st.nextToken();
+            if( ACTION_PLAY.equalsIgnoreCase(command) ) {
+                final String name;
                 if( st.hasMoreTokens() ) {
-                    String timeZoneId = st.nextToken();
-                    if( timeZoneId != null && timeZoneId.length() > 0 ) {
-                        handleTimeZoneChange(container, sourceUserId, timeZoneId, false);
+                    name = st.nextToken();
+                } else {
+                    name = null;
+                }
+                if( name == null || name.length() < MIN_NAME_LENGTH ) {
+                    container.sendMessage(
+                            inboundMessage,
+                            new String[]{TEMPLATE_ID_CREATE_PLAYER_FAILED_NAME_TOO_SHORT},
+                            new HashMap<String, Object>() {{
+                                put("name", name);
+                                put("minlength", MIN_NAME_LENGTH);
+                            }}
+                    );
+                } else if( name.length() > MAX_NAME_LENGTH ) {
+                    container.sendMessage(
+                            inboundMessage,
+                            new String[]{TEMPLATE_ID_CREATE_PLAYER_FAILED_NAME_TOO_LONG},
+                            new HashMap<String, Object>(){{ put("name", name); put("maxlength", MAX_NAME_LENGTH); }}
+                    );
+                } else {
+                    // does the name exist
+                    Player player = this.playerDAO.findByName(name);
+                    if( player != null ) {
+                        container.sendMessage(inboundMessage, new String[]{TEMPLATE_ID_CREATE_PLAYER_FAILED_NAME_ALREADY_EXISTS}, new HashMap<String, Object>(){{ put("name", name); }});
+                    } else {
+                        if( sourceUserId == null ) {
+                            sourceUserId = container.createUser(inboundMessage);
+                        }
+
+                        // create a player
+                        player = new Player();
+                        player.setName(name);
+                        player.setUserId(sourceUserId);
+
+                        int playerId = this.playerDAO.create(player);
+
+                        // is there a timezone?
+                        if( st.hasMoreTokens() ) {
+                            String timeZoneId = st.nextToken();
+                            if( timeZoneId != null && timeZoneId.length() > 0 ) {
+                                handleTimeZoneChange(container, sourceUserId, timeZoneId, false);
+                            }
+                        }
+                        final User user = container.getUser(sourceUserId);
+
+                        final Player newPlayer = player;
+                        container.sendMessage(sourceUserId, new String[]{TEMPLATE_ID_CREATE_PLAYER_SUCCESS}, new HashMap<String, Object>(){{
+                            put("player", newPlayer);
+                            put("timezone", user.getTimeZone());
+                        }}, false);
+                        notifyEnteredLobby(container, player);
                     }
                 }
-
-                final Player newPlayer = player;
-                container.sendMessage(sourceUserId, new String[]{TEMPLATE_ID_CREATE_PLAYER_SUCCESS}, new HashMap<String, Object>(){{
-                    put("player", newPlayer);
-                }}, false);
-                notifyEnteredLobby(container, player);
             }
         }
-
     }
 
 
@@ -152,12 +164,7 @@ public class RockPaperScissorsUniverse implements TemplateUniverse {
     private void handleGameAction(TemplateContainer container, InboundMessage inboundMessage, final Player player, String text, int turnNumber) throws Exception {
         StringTokenizer st = new StringTokenizer(text);
         String command = st.nextToken();
-        Action.Type actionType;
-        try {
-            actionType = Action.Type.valueOf(command.toUpperCase());
-        } catch ( IllegalArgumentException ex ) {
-            actionType = null;
-        }
+        Action.Type actionType = toActionType(command);
         if( actionType != null ) {
             registerPlayerMove(container, player, actionType, turnNumber);
             if( actionType == Action.Type.STOP) {
@@ -238,28 +245,26 @@ public class RockPaperScissorsUniverse implements TemplateUniverse {
                 }
             }
             // remove any users with unsuccessful action ids from the game
-            if( unsuccessfulActionIds.size() < allActions.size() ) {
-                for( Action allAction : allActions ) {
-                    if( unsuccessfulActionIds.contains( allAction.getId() ) ) {
-                        final Player removedPlayer = players.remove(allAction.getPlayerId());
-                        if( removedPlayer != null ) {
-                            removedPlayer.setCurrentGameId(null);
-                            playerDAO.update(removedPlayer);
-                            for( final Player allPlayer : allPlayers ) {
-                                if( allPlayer.getUserId() != null && !allPlayer.isInactive() && allAction.getType().isMove() ) {
-                                    container.sendMessage(
-                                            allPlayer.getUserId(),
-                                            new String[]{TEMPLATE_ID_PLAY_PLAYER_REMOVED},
-                                            new HashMap<String, Object>(){{
-                                                put("removed", removedPlayer);
-                                                put("recipient", allPlayer);
-                                            }},
-                                            false
-                                    );
-                                    if( removedPlayer.getId().equals(allPlayer.getId()) ) {
-                                        // notify that the player has entered the lobby
-                                        notifyEnteredLobby(container, allPlayer);
-                                    }
+            for( Action allAction : allActions ) {
+                if( unsuccessfulActionIds.contains( allAction.getId() ) ) {
+                    final Player removedPlayer = players.remove(allAction.getPlayerId());
+                    if( removedPlayer != null ) {
+                        removedPlayer.setCurrentGameId(null);
+                        playerDAO.update(removedPlayer);
+                        for( final Player allPlayer : allPlayers ) {
+                            if( allPlayer.getUserId() != null && !allPlayer.isInactive() && allAction.getType().isMove() ) {
+                                container.sendMessage(
+                                        allPlayer.getUserId(),
+                                        new String[]{TEMPLATE_ID_PLAY_PLAYER_REMOVED},
+                                        new HashMap<String, Object>(){{
+                                            put("removed", removedPlayer);
+                                            put("recipient", allPlayer);
+                                        }},
+                                        false
+                                );
+                                if( removedPlayer.getId().equals(allPlayer.getId()) ) {
+                                    // notify that the player has entered the lobby
+                                    notifyEnteredLobby(container, allPlayer);
                                 }
                             }
                         }
@@ -369,17 +374,49 @@ public class RockPaperScissorsUniverse implements TemplateUniverse {
         } else if( ACTION_STOP.equalsIgnoreCase(command) ) {
             handleStopAction(container, player, Action.Type.STOP);
         } else if( ACTION_TIMEZONE.equalsIgnoreCase(command) ) {
-            handleTimeZoneChange(container, player.getUserId(), st.nextToken(), true);
+            if( st.hasMoreTokens() ) {
+                StringBuffer remainder = new StringBuffer();
+                while( st.hasMoreElements() ) {
+                    remainder.append(st.nextToken());
+                    if( st.hasMoreTokens() ) {
+                        remainder.append(' ');
+                    }
+                }
+                handleTimeZoneChange(container, player.getUserId(), remainder.toString(), true);
+            } else {
+                User user = container.getUser(player.getUserId());
+                handleTimeZoneChange(container, player.getUserId(), user.getTimeZone().getID(), true);
+            }
         } else {
             // check that it isn't a move (we will accept those) too
-            try {
-                Action.Type actionType = Action.Type.valueOf(command.toUpperCase());
+            Action.Type actionType = toActionType(command);
+            if( actionType != null ) {
                 handleStartAction(container, inboundMessage, player, st, actionType);
-            } catch( IllegalArgumentException ex ) {
+            } else {
                 handleUnrecognisedCommand(container, inboundMessage, player, command, true);
-
             }
         }
+    }
+
+    private Action.Type toActionType(String command) {
+        Action.Type result;
+        try {
+            result = Action.Type.valueOf(command.toUpperCase());
+        } catch( IllegalArgumentException ex ) {
+            if( command != null && command.length() > 0 ) {
+                // find an action that starts with it
+                result = null;
+                for( Action.Type actionType : Action.Type.values() ) {
+                    if( actionType.name().startsWith(command.toUpperCase()) ) {
+                        result = actionType;
+                        break;
+                    }
+                }
+            } else {
+                result = null;
+            }
+        }
+        return result;
     }
 
     private void handleStartAction(TemplateContainer container, InboundMessage inboundMessage, Player player, StringTokenizer st, Action.Type firstMove) throws Exception {
@@ -419,7 +456,6 @@ public class RockPaperScissorsUniverse implements TemplateUniverse {
 
     private void handleStopAction(TemplateContainer container, Player player, final Action.Type reason) throws Exception {
         if( player.getUserId() != null ) {
-            // TODO send a message
             container.sendMessage(
                     player.getUserId(),
                     new String[]{TEMPLATE_ID_LEFT_GAME},
@@ -437,7 +473,18 @@ public class RockPaperScissorsUniverse implements TemplateUniverse {
 
     private void handleTimeZoneChange(TemplateContainer container, long userId, String timeZoneId, boolean immediate) throws Exception {
         User user = container.getUser(userId);
-        final TimeZone timeZone = TimeZone.getTimeZone(timeZoneId);
+        // try to find the timezone
+
+        String actualTimeZoneId = timeZoneId;
+        for( String availableTimeZoneId : TimeZone.getAvailableIDs() ) {
+            if( availableTimeZoneId.equalsIgnoreCase(timeZoneId) ) {
+                actualTimeZoneId = timeZoneId;
+                break;
+            } else if( availableTimeZoneId.toLowerCase().contains(timeZoneId.toLowerCase()) ) {
+                actualTimeZoneId = availableTimeZoneId;
+            }
+        }
+        final TimeZone timeZone = TimeZone.getTimeZone(actualTimeZoneId);
         user.setTimeZone(timeZone);
         container.sendMessage(
                 userId,
@@ -450,20 +497,23 @@ public class RockPaperScissorsUniverse implements TemplateUniverse {
     }
 
     private void handleUnrecognisedCommand(TemplateContainer container, InboundMessage inboundMessage, Player player, final String command, boolean lobby) throws Exception {
-        String templateId;
-        if( lobby ) {
-            templateId = TEMPLATE_ID_LOBBY_UNRECOGNISED_COMMAND;
-        } else {
-            templateId = TEMPLATE_ID_PLAY_UNRECOGNISED_COMMAND;
+        if( !player.isInactive() ) {
+            // don't spam inactive players (could be trying to send legitimate SMSs)
+            String templateId;
+            if( lobby ) {
+                templateId = TEMPLATE_ID_LOBBY_UNRECOGNISED_COMMAND;
+            } else {
+                templateId = TEMPLATE_ID_PLAY_UNRECOGNISED_COMMAND;
+            }
+            container.sendMessage(
+                    player.getUserId(),
+                    new String[]{templateId},
+                    new HashMap<String, Object>(){{
+                        put("command", command);
+                    }},
+                    true
+            );
         }
-        container.sendMessage(
-                player.getUserId(),
-                new String[]{templateId},
-                new HashMap<String, Object>(){{
-                    put("command", command);
-                }},
-                true
-        );
     }
 
     private void handleTimeout(TemplateContainer container, ScheduledMessage scheduledMessage) throws Exception {

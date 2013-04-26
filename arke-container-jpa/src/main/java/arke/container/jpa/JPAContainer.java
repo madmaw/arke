@@ -327,7 +327,15 @@ public class JPAContainer implements Container, JPAMessageHandler {
         }
         if( user.getTimeZoneId() == null ) {
             // attempt to guess
-            String timeZoneId = this.timeZoneGuesser.guessTimeZoneId(sourcePersistentDevice);
+
+            String timeZoneId;
+            try {
+                timeZoneId = this.timeZoneGuesser.guessTimeZoneId(sourcePersistentDevice);
+            } catch( Exception ex ) {
+                // just move on
+                LOG.log(Level.WARNING, "unable to guess timezone", ex);
+                timeZoneId = null;
+            }
             if( timeZoneId != null ) {
                 user.setTimeZoneId(timeZoneId);
                 this.persistentUserDAO.update(user);

@@ -1,1 +1,1 @@
-Timezone set ${timezone.displayName}.
+#if($timezone)Your current time-zone is ${timezone.displayName}.#else Your time-zone is unknown.#end

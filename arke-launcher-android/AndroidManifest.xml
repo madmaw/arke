@@ -5,16 +5,26 @@
 
     <supports-screens android:anyDensity="true" android:largeScreens="true" android:normalScreens="true" android:resizeable="true" android:smallScreens="true"/>
 
+    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
     <!-- do we need Internet? -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- do we need these? -->
+    <uses-permission android:name="android.permission.READ_SMS"/>
 
     <application android:label="@string/app_name">
-        <activity android:alwaysRetainTaskState="true" android:exported="true" android:launchMode="singleTask" android:clearTaskOnLaunch="false" android:configChanges="keyboardHidden|orientation" android:finishOnTaskLaunch="false" android:name=".ArkeLauncherActivity">
+        <!-- manual start -->
+        <activity android:alwaysRetainTaskState="true" android:clearTaskOnLaunch="false" android:configChanges="keyboardHidden|orientation" android:exported="true" android:finishOnTaskLaunch="false" android:launchMode="singleTask" android:name=".ArkeLauncherActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- auto start on SMS -->
+        <receiver android:name=".ArkeLauncherBroadcastReceiver">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

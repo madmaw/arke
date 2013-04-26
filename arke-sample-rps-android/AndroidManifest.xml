@@ -19,7 +19,9 @@
     <!-- TODO should probably launch on receiving an SMS -->
 
     <application android:label="@string/app_name">
-        <service android:enabled="true" android:exported="true" android:name=".RockPaperScissorsService"/>
+        <service android:enabled="true" android:exported="true" android:name=".RockPaperScissorsService">
+
+        </service>
     </application>
 
 </manifest>
